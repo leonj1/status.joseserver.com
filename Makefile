@@ -1,23 +1,20 @@
 # Application configuration
 APP_NAME = status-service
-PORT ?= 8000
 DATA_DIR ?= $(PWD)/data
-FRONTEND_DIR = src/frontend
 
 # Docker configuration
-DOCKER_IMAGE = $(APP_NAME)
 DOCKER_TEST_IMAGE = $(APP_NAME)-tests
 
 # Declare phony targets (targets that don't represent files)
-.PHONY: test build run stop clean help frontend-install frontend backend dev
+.PHONY: test build run stop clean help dev logs
 
 # Show help by default
 .DEFAULT_GOAL := help
 
-# Build the application Docker image
-build: ## Build the production Docker image
-	@echo "Building production Docker image..."
-	docker build -t $(DOCKER_IMAGE) .
+# Build all Docker images
+build: ## Build all Docker images
+	@echo "Building Docker images..."
+	docker-compose build
 
 # Build the test Docker image
 build-test: ## Build the test Docker image
@@ -30,46 +27,35 @@ test: build-test ## Run tests in Docker
 	docker run --rm $(DOCKER_TEST_IMAGE)
 
 # Run the application in Docker
-run: build ## Run the application container (use PORT=xxxx to override default port)
-	@echo "Starting application on port $(PORT)..."
+run: ## Run the application (frontend and backend)
+	@echo "Starting application..."
 	@mkdir -p $(DATA_DIR)
-	docker run --rm -d \
-		-p $(PORT):8000 \
-		-v $(DATA_DIR):/app/data \
-		--name $(APP_NAME) \
-		$(DOCKER_IMAGE)
-	@echo "Application started! Access it at http://localhost:$(PORT)"
+	docker-compose up -d
+	@echo "Application started!"
+	@echo "Frontend: http://localhost"
+	@echo "Backend API: http://localhost:8000"
 
-# Install frontend dependencies
-frontend-install: ## Install frontend dependencies
-	@echo "Installing frontend dependencies..."
-	cd $(FRONTEND_DIR) && npm install
+# View application logs
+logs: ## View application logs
+	docker-compose logs -f
 
-# Run frontend development server
-frontend: frontend-install ## Run frontend development server
-	@echo "Starting frontend development server..."
-	cd $(FRONTEND_DIR) && npm run dev
-
-# Run backend development server
-backend: ## Run backend development server
-	@echo "Starting backend development server..."
-	cd src && uvicorn app.main:app --reload --host 0.0.0.0 --port $(PORT)
-
-# Run both frontend and backend
-dev: ## Run both frontend and backend development servers
-	@echo "Starting development servers..."
-	$(MAKE) backend & $(MAKE) frontend
-
-# Stop the running container
-stop: ## Stop the running application container
+# Stop the application
+stop: ## Stop the application
 	@echo "Stopping application..."
-	docker stop $(APP_NAME) || true
+	docker-compose down
 
 # Clean up Docker resources
 clean: stop ## Clean up all Docker resources
 	@echo "Cleaning up Docker resources..."
-	docker rmi $(DOCKER_IMAGE) $(DOCKER_TEST_IMAGE) || true
+	docker-compose down -v --rmi all
+	docker rmi $(DOCKER_TEST_IMAGE) || true
 	@echo "Cleanup complete!"
+
+# Development mode with live reload
+dev: ## Run application in development mode
+	@echo "Starting application in development mode..."
+	@mkdir -p $(DATA_DIR)
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 # Help target
 help: ## Show this help message
