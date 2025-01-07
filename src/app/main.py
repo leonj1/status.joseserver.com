@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import FastAPI, Depends, Query
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
@@ -26,6 +27,15 @@ app = FastAPI(
     description="Health check service for joseserver.com",
     version="0.1.0",
     lifespan=lifespan
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://status.joseserver.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
 @app.get("/health")
