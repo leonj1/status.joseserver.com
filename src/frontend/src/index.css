@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50;
+  }
+}
+
+@layer components {
+  .status-badge {
+    @apply px-2 py-1 text-sm font-medium rounded-full;
+  }
+  
+  .status-ok {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .status-minor {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  
+  .status-major {
+    @apply bg-red-100 text-red-800;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-sm p-6 mb-4;
+  }
+}

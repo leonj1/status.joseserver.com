@@ -2,13 +2,14 @@
 APP_NAME = status-service
 PORT ?= 8000
 DATA_DIR ?= $(PWD)/data
+FRONTEND_DIR = src/frontend
 
 # Docker configuration
 DOCKER_IMAGE = $(APP_NAME)
 DOCKER_TEST_IMAGE = $(APP_NAME)-tests
 
 # Declare phony targets (targets that don't represent files)
-.PHONY: test build run stop clean help
+.PHONY: test build run stop clean help frontend-install frontend backend dev
 
 # Show help by default
 .DEFAULT_GOAL := help
@@ -39,11 +40,30 @@ run: build ## Run the application container (use PORT=xxxx to override default p
 		$(DOCKER_IMAGE)
 	@echo "Application started! Access it at http://localhost:$(PORT)"
 
+# Install frontend dependencies
+frontend-install: ## Install frontend dependencies
+	@echo "Installing frontend dependencies..."
+	cd $(FRONTEND_DIR) && npm install
+
+# Run frontend development server
+frontend: frontend-install ## Run frontend development server
+	@echo "Starting frontend development server..."
+	cd $(FRONTEND_DIR) && npm run dev
+
+# Run backend development server
+backend: ## Run backend development server
+	@echo "Starting backend development server..."
+	cd src && uvicorn app.main:app --reload --host 0.0.0.0 --port $(PORT)
+
+# Run both frontend and backend
+dev: ## Run both frontend and backend development servers
+	@echo "Starting development servers..."
+	$(MAKE) backend & $(MAKE) frontend
+
 # Stop the running container
 stop: ## Stop the running application container
 	@echo "Stopping application..."
-	docker stop -t 0 $(APP_NAME) || true
-	docker rm -f $(APP_NAME) || true
+	docker stop $(APP_NAME) || true
 
 # Clean up Docker resources
 clean: stop ## Clean up all Docker resources
