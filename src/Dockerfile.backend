@@ -4,10 +4,13 @@ FROM python:3.10-slim
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8000
+    PORT=5000
 
 # Create a non-root user
 RUN useradd -m -s /bin/bash app_user
+
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -17,7 +20,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY src/ src/
+COPY app/ app/
 
 # Change ownership to non-root user
 RUN chown -R app_user:app_user /app
@@ -35,4 +38,4 @@ ENV DATABASE_URL="sqlite+aiosqlite:///data/incidents.db"
 EXPOSE $PORT
 
 # Run the application
-CMD ["sh", "-c", "cd src && uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]

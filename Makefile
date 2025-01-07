@@ -42,7 +42,7 @@ logs: ## View application logs
 # Stop the application
 stop: ## Stop the application
 	@echo "Stopping application..."
-	docker-compose down
+	docker-compose down -v
 
 # Clean up Docker resources
 clean: stop ## Clean up all Docker resources

@@ -9,11 +9,11 @@ services:
     volumes:
       - ./data:/app/data
     environment:
-      - PORT=8000
+      - PORT=3601
     ports:
-      - "8000:8000"
+      - "3601:3601"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3601/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -24,9 +24,9 @@ services:
       dockerfile: Dockerfile
     container_name: status-frontend
     ports:
-      - "80:80"
+      - "3600:80"
     environment:
-      - VITE_API_URL=/api
+      - VITE_API_URL=https://status-api.joseserver.com
     depends_on:
       backend:
         condition: service_healthy
