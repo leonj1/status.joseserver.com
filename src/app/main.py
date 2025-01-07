@@ -1,12 +1,15 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import List
 from fastapi import FastAPI, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import init_db, get_db
 from app.models.incident import Incident
+from app.models.history import IncidentHistory
 from app.schemas.incident import IncidentCreate, IncidentResponse
+from app.schemas.history import IncidentWithHistory, IncidentHistoryResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,14 +41,15 @@ async def health_check() -> JSONResponse:
         status_code=200
     )
 
-@app.post("/incidents", response_model=IncidentResponse)
+@app.post("/incidents", response_model=IncidentWithHistory)
 async def create_incident(
     incident_data: IncidentCreate,
     db: AsyncSession = Depends(get_db)
 ) -> dict:
     """
-    Create a new incident record.
+    Create a new incident record and record it in history.
     """
+    # Create the incident
     incident = Incident(
         service=incident_data.service,
         previous_state=incident_data.previous_state,
@@ -60,4 +64,36 @@ async def create_incident(
     await db.commit()
     await db.refresh(incident)
     
+    # Create history entry
+    history_entry = IncidentHistory(
+        incident_id=incident.id,
+        service=incident.service,
+        previous_state=incident.previous_state,
+        current_state=incident.current_state,
+        title=incident.title,
+        description=incident.description,
+        components=incident.components,
+        url=incident.url
+    )
+    
+    db.add(history_entry)
+    await db.commit()
+    await db.refresh(incident)  # Refresh to get the new history
+    
     return incident.to_dict()
+
+@app.get("/incidents/{incident_id}/history", response_model=List[IncidentHistoryResponse])
+async def get_incident_history(
+    incident_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> List[dict]:
+    """
+    Get the history of changes for a specific incident.
+    """
+    from sqlalchemy import select
+    
+    query = select(IncidentHistory).filter(IncidentHistory.incident_id == incident_id)
+    result = await db.execute(query)
+    history = result.scalars().all()
+    
+    return [entry.to_dict() for entry in history]

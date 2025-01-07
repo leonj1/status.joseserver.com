@@ -64,7 +64,7 @@ test_cases = [
         "expected_status": 200,
         "expected_fields": [
             "id", "service", "previous_state", "current_state",
-            "created_at", "incident"
+            "created_at", "incident", "history"
         ]
     },
     {
@@ -107,3 +107,34 @@ def test_create_incident(test_case, test_client):
         assert incident["description"] == test_case["payload"]["incident"]["description"]
         assert incident["components"] == test_case["payload"]["incident"]["components"]
         assert incident["url"] == test_case["payload"]["incident"]["url"]
+        
+        # Verify history was created
+        assert "history" in data
+        assert len(data["history"]) == 1
+        history_entry = data["history"][0]
+        assert history_entry["service"] == test_case["payload"]["service"]
+        assert history_entry["previous_state"] == test_case["payload"]["previous_state"]
+        assert history_entry["current_state"] == test_case["payload"]["current_state"]
+        assert "recorded_at" in history_entry
+
+def test_get_incident_history(test_client):
+    # First create an incident
+    incident_data = test_cases[0]["payload"]
+    response = test_client.post("/incidents", json=incident_data)
+    assert response.status_code == 200
+    incident_id = response.json()["id"]
+    
+    # Get the history
+    response = test_client.get(f"/incidents/{incident_id}/history")
+    assert response.status_code == 200
+    
+    history = response.json()
+    assert isinstance(history, list)
+    assert len(history) == 1
+    
+    entry = history[0]
+    assert entry["incident_id"] == incident_id
+    assert entry["service"] == incident_data["service"]
+    assert entry["previous_state"] == incident_data["previous_state"]
+    assert entry["current_state"] == incident_data["current_state"]
+    assert "recorded_at" in entry
