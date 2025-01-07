@@ -1,5 +1,6 @@
 import pytest
 import pytest_asyncio
+from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -138,3 +139,69 @@ def test_get_incident_history(test_client):
     assert entry["previous_state"] == incident_data["previous_state"]
     assert entry["current_state"] == incident_data["current_state"]
     assert "recorded_at" in entry
+
+def test_get_recent_incidents_default(test_client):
+    # Create 15 incidents
+    incident_data = test_cases[0]["payload"]
+    for i in range(15):
+        incident_data["incident"]["title"] = f"Test Incident {i}"
+        response = test_client.post("/incidents", json=incident_data)
+        assert response.status_code == 200
+    
+    # Get recent incidents (default should be 10)
+    response = test_client.get("/incidents/recent")
+    assert response.status_code == 200
+    
+    incidents = response.json()
+    assert len(incidents) == 10
+    # Verify they're in reverse chronological order
+    for i in range(len(incidents) - 1):
+        current = datetime.fromisoformat(incidents[i]["created_at"])
+        next_incident = datetime.fromisoformat(incidents[i + 1]["created_at"])
+        assert current >= next_incident
+
+def test_get_recent_incidents_with_count(test_client):
+    # Create 5 incidents
+    incident_data = test_cases[0]["payload"]
+    for i in range(5):
+        incident_data["incident"]["title"] = f"Test Incident {i}"
+        response = test_client.post("/incidents", json=incident_data)
+        assert response.status_code == 200
+    
+    # Get recent incidents with count=3
+    response = test_client.get("/incidents/recent?count=3")
+    assert response.status_code == 200
+    
+    incidents = response.json()
+    assert len(incidents) == 3
+
+def test_get_recent_incidents_with_date(test_client):
+    # Create incidents with different dates
+    incident_data = test_cases[0]["payload"]
+    
+    # Create an old incident
+    old_date = (datetime.utcnow() - timedelta(days=7)).isoformat()
+    response = test_client.post("/incidents", json=incident_data)
+    assert response.status_code == 200
+    
+    # Create a recent incident
+    response = test_client.post("/incidents", json=incident_data)
+    assert response.status_code == 200
+    
+    # Get incidents after the old date
+    response = test_client.get(f"/incidents/recent?start_date={old_date}")
+    assert response.status_code == 200
+    
+    incidents = response.json()
+    assert len(incidents) == 2
+    
+    # Get incidents with future date (should return empty list)
+    future_date = (datetime.utcnow() + timedelta(days=1)).isoformat()
+    response = test_client.get(f"/incidents/recent?start_date={future_date}")
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+def test_get_recent_incidents_count_limit(test_client):
+    # Try to get more than maximum allowed incidents
+    response = test_client.get("/incidents/recent?count=51")
+    assert response.status_code == 422  # Validation error

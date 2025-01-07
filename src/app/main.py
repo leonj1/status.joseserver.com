@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import List
-from fastapi import FastAPI, Depends
+from typing import List, Optional
+from fastapi import FastAPI, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc
 
 from app.core.database import init_db, get_db
 from app.models.incident import Incident
@@ -90,10 +91,38 @@ async def get_incident_history(
     """
     Get the history of changes for a specific incident.
     """
-    from sqlalchemy import select
-    
     query = select(IncidentHistory).filter(IncidentHistory.incident_id == incident_id)
     result = await db.execute(query)
     history = result.scalars().all()
     
     return [entry.to_dict() for entry in history]
+
+@app.get("/incidents/recent", response_model=List[IncidentWithHistory])
+async def get_recent_incidents(
+    start_date: Optional[datetime] = Query(
+        None,
+        description="Start date for incidents (ISO format). If not provided, returns most recent incidents."
+    ),
+    count: int = Query(
+        10,
+        ge=1,
+        le=50,
+        description="Number of incidents to return (max 50)"
+    ),
+    db: AsyncSession = Depends(get_db)
+) -> List[dict]:
+    """
+    Get recent incidents with optional date filtering.
+    Returns the most recent incidents by default, limited to 10 unless specified otherwise.
+    """
+    query = select(Incident).order_by(desc(Incident.created_at))
+    
+    if start_date:
+        query = query.filter(Incident.created_at >= start_date)
+    
+    query = query.limit(count)
+    
+    result = await db.execute(query)
+    incidents = result.scalars().all()
+    
+    return [incident.to_dict() for incident in incidents]
