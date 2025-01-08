@@ -11,7 +11,7 @@ from sqlalchemy import select, desc
 from app.core.database import init_db, get_db
 from app.models.incident import Incident
 from app.models.history import IncidentHistory
-from app.schemas.incident import IncidentCreate, IncidentResponse
+from app.schemas.incident import IncidentCreate, IncidentResponse, IncidentDetail
 from app.schemas.history import IncidentWithHistory, IncidentHistoryResponse
 
 @asynccontextmanager
