@@ -22,17 +22,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ app/
 
-# Change ownership to non-root user
-RUN chown -R app_user:app_user /app
+# Create data directory and set permissions
+RUN mkdir -p /app/data && \
+    chown -R app_user:app_user /app
 
 # Switch to non-root user
 USER app_user
 
-# Create volume for SQLite database
-VOLUME ["/app/data"]
-
 # Set environment variable for database path
-ENV DATABASE_URL="sqlite+aiosqlite:///data/incidents.db"
+ENV DATABASE_URL="sqlite+aiosqlite:///app/data/incidents.db"
 
 # Expose port
 EXPOSE $PORT
