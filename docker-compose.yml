@@ -12,6 +12,15 @@ services:
       - PORT=3601
     ports:
       - "3601:3601"
+    # Add user mapping to match container's app_user
+    user: "1000:1000"
+    # Add entrypoint to fix permissions
+    entrypoint: >
+      /bin/sh -c "
+      mkdir -p /app/data &&
+      chown -R app_user:app_user /app/data &&
+      exec uvicorn app.main:app --host 0.0.0.0 --port $$PORT
+      "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3601/health"]
       interval: 30s
