@@ -25,7 +25,7 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 bg-blur-pattern">
+    <div className="min-h-screen bg-gray-900">
       {/* Navigation */}
       <nav className="fixed w-full z-50 bg-gray-900/80 backdrop-blur-md border-b border-purple-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
