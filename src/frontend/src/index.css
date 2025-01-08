@@ -4,28 +4,96 @@
 
 @layer base {
   body {
-    @apply bg-gray-50;
+    @apply bg-gray-900 text-gray-100;
   }
 }
 
 @layer components {
+  .nav-link {
+    @apply text-gray-300 hover:text-purple-400 transition-colors duration-300;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg 
+           shadow-lg hover:shadow-purple-500/25 transition-all duration-300
+           transform hover:-translate-y-0.5;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 border border-purple-500 text-purple-400 rounded-lg
+           hover:bg-purple-500 hover:text-white transition-all duration-300
+           transform hover:-translate-y-0.5;
+  }
+
   .status-badge {
-    @apply px-2 py-1 text-sm font-medium rounded-full;
+    @apply px-3 py-1 text-sm font-medium rounded-full transition-colors duration-300;
   }
   
   .status-ok {
-    @apply bg-green-100 text-green-800;
+    @apply bg-green-900/50 text-green-300 border border-green-500/30;
   }
   
   .status-minor {
-    @apply bg-yellow-100 text-yellow-800;
+    @apply bg-yellow-900/50 text-yellow-300 border border-yellow-500/30;
   }
   
   .status-major {
-    @apply bg-red-100 text-red-800;
+    @apply bg-red-900/50 text-red-300 border border-red-500/30;
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-sm p-6 mb-4;
+    @apply bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 mb-4
+           border border-purple-500/10 hover:border-purple-500/30
+           transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10;
+  }
+
+  .glass-card {
+    @apply bg-gray-800/30 backdrop-blur-md rounded-xl p-8
+           border border-purple-500/20 hover:border-purple-500/40
+           transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20
+           transform hover:-translate-y-1;
+  }
+
+  .purple-gradient {
+    @apply bg-gradient-to-br from-purple-600 to-purple-900;
+  }
+
+  .purple-glow {
+    @apply hover:shadow-lg hover:shadow-purple-500/50 transition-shadow duration-300;
+  }
+
+  .floating {
+    animation: floating 3s ease-in-out infinite;
+  }
+}
+
+@keyframes floating {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.bg-blur-pattern {
+  background-image: radial-gradient(circle at 50% 50%,
+    rgba(124, 58, 237, 0.1) 0%,
+    rgba(124, 58, 237, 0.05) 25%,
+    transparent 50%);
+  background-size: 100px 100px;
+  background-position: 0 0;
+  animation: patternMove 15s linear infinite;
+}
+
+@keyframes patternMove {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 100px 100px;
   }
 }
