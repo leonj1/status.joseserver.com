@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List, Optional
+import random
 from fastapi import FastAPI, Depends, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -136,3 +137,82 @@ async def get_recent_incidents(
     incidents = result.scalars().all()
     
     return [incident.to_dict() for incident in incidents]
+
+@app.get("/incidents/generate", response_model=IncidentWithHistory)
+async def generate_random_incident(
+    db: AsyncSession = Depends(get_db)
+) -> dict:
+    """
+    Generate and create a random incident for testing purposes.
+    """
+    services = ["api", "database", "web", "auth", "storage", "compute"]
+    states = ["operational", "degraded", "outage", "maintenance"]
+    component_types = ["server", "database", "cache", "load-balancer", "api"]
+    
+    service = random.choice(services)
+    current_state = random.choice(states)
+    # Ensure previous state is different from current
+    previous_state = random.choice([s for s in states if s != current_state])
+    
+    # Generate 1-3 random components
+    components = random.sample(component_types, random.randint(1, 3))
+    
+    # Generate incident title based on service and state
+    titles = [
+        f"{service.title()} Service {current_state.title()} Detected",
+        f"Unexpected {current_state.title()} in {service.title()} System",
+        f"{service.title()} Performance {current_state.title()}",
+        f"Investigating {service.title()} Service Issues"
+    ]
+    
+    descriptions = [
+        f"Our monitoring system detected {current_state} status in the {service} service affecting {', '.join(components)}.",
+        f"We are investigating reports of {current_state} performance in the {service} system.",
+        f"Engineers are responding to {current_state} alerts from {service} service components.",
+        f"Automated systems detected abnormal behavior in {service} service {components[0]}."
+    ]
+    
+    incident_data = IncidentCreate(
+        service=service,
+        previous_state=previous_state,
+        current_state=current_state,
+        incident=IncidentDetail(
+            title=random.choice(titles),
+            description=random.choice(descriptions),
+            components=components,
+            url=f"https://status.joseserver.com/incidents/{service}-{int(datetime.utcnow().timestamp())}"
+        )
+    )
+    
+    # Use the existing create_incident logic
+    incident = Incident(
+        service=incident_data.service,
+        previous_state=incident_data.previous_state,
+        current_state=incident_data.current_state,
+        title=incident_data.incident.title,
+        description=incident_data.incident.description,
+        components=incident_data.incident.components,
+        url=str(incident_data.incident.url)
+    )
+    
+    db.add(incident)
+    await db.commit()
+    await db.refresh(incident)
+    
+    # Create history entry
+    history_entry = IncidentHistory(
+        incident_id=incident.id,
+        service=incident.service,
+        previous_state=incident.previous_state,
+        current_state=incident.current_state,
+        title=incident.title,
+        description=incident.description,
+        components=incident.components,
+        url=incident.url
+    )
+    
+    db.add(history_entry)
+    await db.commit()
+    await db.refresh(incident)
+    
+    return incident.to_dict()
