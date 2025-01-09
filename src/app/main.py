@@ -140,17 +140,24 @@ async def get_recent_incidents(
 
 @app.get("/incidents/generate", response_model=IncidentWithHistory)
 async def generate_random_incident(
+    state: Optional[str] = Query(
+        None,
+        description="Desired state for the incident",
+        enum=["operational", "degraded", "outage", "maintenance"]
+    ),
     db: AsyncSession = Depends(get_db)
 ) -> dict:
     """
     Generate and create a random incident for testing purposes.
+    Optionally specify the desired state of the incident.
     """
     services = ["api", "database", "web", "auth", "storage", "compute"]
     states = ["operational", "degraded", "outage", "maintenance"]
     component_types = ["server", "database", "cache", "load-balancer", "api"]
     
     service = random.choice(services)
-    current_state = random.choice(states)
+    # Use provided state or random if not provided
+    current_state = state if state else random.choice(states)
     # Ensure previous state is different from current
     previous_state = random.choice([s for s in states if s != current_state])
     
