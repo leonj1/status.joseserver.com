@@ -1,11 +1,28 @@
 import { useEffect, useState } from 'react';
-import { getRecentIncidents, type Incident } from './api/client';
+import { getRecentIncidents, generateRandomIncident, type Incident } from './api/client';
 import { IncidentCard } from './components/IncidentCard';
+import { RandomIncidentModal } from './components/RandomIncidentModal';
 
 function App() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  const handleGenerateIncident = async (state: string) => {
+    try {
+      setGenerating(true);
+      const newIncident = await generateRandomIncident(state);
+      setIncidents(prev => [newIncident, ...prev]);
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error('Error generating incident:', err);
+      setError('Failed to generate incident. Please try again.');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   useEffect(() => {
     const fetchIncidents = async () => {
@@ -35,6 +52,15 @@ function App() {
                 System Status
               </h1>
             </div>
+            <div>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                disabled={generating}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {generating ? 'Generating...' : 'Random Incident'}
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -62,6 +88,12 @@ function App() {
           </div>
         )}
       </main>
+
+      <RandomIncidentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleGenerateIncident}
+      />
     </div>
   );
 }

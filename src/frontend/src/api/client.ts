@@ -53,3 +53,9 @@ export const getHealthStatus = async () => {
   const response = await api.get('/health');
   return response.data;
 };
+
+export const generateRandomIncident = async (state?: string) => {
+  const url = state ? `/incidents/generate?state=${state}` : '/incidents/generate';
+  const response = await api.get<Incident>(url);
+  return response.data;
+};
