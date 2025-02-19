@@ -56,3 +56,7 @@ logs/
 # OS specific
 .DS_Store
 Thumbs.db
+.aider*
+incidents.db
+.python-version
+
