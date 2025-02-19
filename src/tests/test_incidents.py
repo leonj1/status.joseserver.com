@@ -1,6 +1,11 @@
 import pytest
 import pytest_asyncio
+import time
 from datetime import datetime, timedelta
+
+def wait(seconds):
+    """Helper function to add delay between operations"""
+    time.sleep(seconds)
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -141,19 +146,35 @@ def test_get_incident_history(test_client):
     assert "recorded_at" in entry
 
 def test_get_recent_incidents_default(test_client):
-    # Create 15 incidents
-    incident_data = test_cases[0]["payload"]
+    # Create 15 incidents with small delays to ensure distinct timestamps
+    incident_data = test_cases[0]["payload"].copy()
+    created_incidents = []
+        
     for i in range(15):
+        incident_data["incident"] = test_cases[0]["payload"]["incident"].copy()
+        incident_data["service"] = f"Service {i}"  # Different service for each incident
         incident_data["incident"]["title"] = f"Test Incident {i}"
+        created_incidents.append({
+            "service": incident_data["service"],
+            "title": incident_data["incident"]["title"]
+        })
         response = test_client.post("/incidents", json=incident_data)
         assert response.status_code == 200
+        # Small delay to ensure distinct timestamps
+        wait(0.1)
     
-    # Get recent incidents (default should be 10)
-    response = test_client.get("/incidents/recent")
+    # Get recent incidents with explicit count=10
+    response = test_client.get("/incidents/recent?count=10")
     assert response.status_code == 200
     
     incidents = response.json()
     assert len(incidents) == 10
+    
+    # Verify we got the 10 most recent incidents (last 10 we created)
+    received_incidents = set((inc["service"], inc["incident"]["title"]) for inc in incidents)
+    expected_incidents = set((inc["service"], inc["title"]) for inc in created_incidents[-10:])
+    assert received_incidents == expected_incidents
+    
     # Verify they're in reverse chronological order
     for i in range(len(incidents) - 1):
         current = datetime.fromisoformat(incidents[i]["created_at"])
@@ -177,23 +198,33 @@ def test_get_recent_incidents_with_count(test_client):
 
 def test_get_recent_incidents_with_date(test_client):
     # Create incidents with different dates
-    incident_data = test_cases[0]["payload"]
+    incident_data = test_cases[0]["payload"].copy()
     
     # Create an old incident
-    old_date = (datetime.utcnow() - timedelta(days=7)).isoformat()
+    incident_data["incident"] = test_cases[0]["payload"]["incident"].copy()
+    incident_data["incident"]["title"] = "Old Incident"
     response = test_client.post("/incidents", json=incident_data)
     assert response.status_code == 200
+    old_incident = response.json()
+    wait(0.1)  # Ensure distinct timestamps
+    
+    # Record the timestamp after the first incident but before the second
+    middle_date = datetime.utcnow().isoformat()
+    wait(0.1)  # Ensure distinct timestamps
     
     # Create a recent incident
+    incident_data["incident"]["title"] = "Recent Incident"
     response = test_client.post("/incidents", json=incident_data)
     assert response.status_code == 200
+    recent_incident = response.json()
     
-    # Get incidents after the old date
-    response = test_client.get(f"/incidents/recent?start_date={old_date}")
+    # Get incidents after the middle date (should only get the recent one)
+    response = test_client.get(f"/incidents/recent?start_date={middle_date}")
     assert response.status_code == 200
     
     incidents = response.json()
-    assert len(incidents) == 2
+    assert len(incidents) == 1
+    assert incidents[0]["incident"]["title"] == "Recent Incident"
     
     # Get incidents with future date (should return empty list)
     future_date = (datetime.utcnow() + timedelta(days=1)).isoformat()
@@ -205,3 +236,60 @@ def test_get_recent_incidents_count_limit(test_client):
     # Try to get more than maximum allowed incidents
     response = test_client.get("/incidents/recent?count=51")
     assert response.status_code == 422  # Validation error
+
+def test_get_recent_incidents_latest_per_service(test_client):
+    # Create multiple incidents for the same service
+    service_a_incidents = [
+        {
+            "service": "Service A",
+            "previous_state": "operational",
+            "current_state": "outage",
+            "incident": {
+                "title": "Service A Outage",
+                "description": "Initial outage",
+                "components": ["Component1"],
+                "url": "https://status.test-service.com/incident-1"
+            }
+        },
+        {
+            "service": "Service A",
+            "previous_state": "outage",
+            "current_state": "degraded",
+            "incident": {
+                "title": "Service A Degraded",
+                "description": "Partially restored",
+                "components": ["Component1"],
+                "url": "https://status.test-service.com/incident-2"
+            }
+        },
+        {
+            "service": "Service A",
+            "previous_state": "degraded",
+            "current_state": "operational",
+            "incident": {
+                "title": "Service A Restored",
+                "description": "Fully operational",
+                "components": ["Component1"],
+                "url": "https://status.test-service.com/incident-3"
+            }
+        }
+    ]
+    
+    # Create incidents
+    for incident in service_a_incidents:
+        response = test_client.post("/incidents", json=incident)
+        assert response.status_code == 200
+    
+    # Get recent incidents
+    response = test_client.get("/incidents/recent")
+    assert response.status_code == 200
+    
+    incidents = response.json()
+    
+    # Find Service A incidents
+    service_a_incidents = [i for i in incidents if i["service"] == "Service A"]
+    
+    # Should only have one incident for Service A
+    assert len(service_a_incidents) == 1
+    # Should be the latest state (operational)
+    assert service_a_incidents[0]["current_state"] == "operational"

@@ -6,7 +6,7 @@ from fastapi import FastAPI, Depends, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func, and_
 
 from app.core.database import init_db, get_db
 from app.models.incident import Incident
@@ -114,11 +114,11 @@ async def get_recent_incidents(
         None,
         description="Start date for incidents (ISO format). If not provided, returns most recent incidents."
     ),
-    count: int = Query(
-        10,
+    count: Optional[int] = Query(
+        None,  # No default, so None means "latest per service"
         ge=1,
         le=50,
-        description="Number of incidents to return (max 50)"
+        description="Number of incidents to return (max 50). If not provided, returns latest per service."
     ),
     db: AsyncSession = Depends(get_db)
 ) -> List[dict]:
@@ -126,13 +126,45 @@ async def get_recent_incidents(
     Get recent incidents with optional date filtering.
     Returns the most recent incidents by default, limited to 10 unless specified otherwise.
     """
-    query = select(Incident).order_by(desc(Incident.created_at))
-    
+    # Base query to get all incidents
+    base_query = select(Incident)
+
     if start_date:
-        query = query.filter(Incident.created_at >= start_date)
-    
-    query = query.limit(count)
-    
+        # When filtering by date, return all matching incidents
+        base_query = base_query.filter(Incident.created_at >= start_date)
+
+    if count is not None:
+        # When count is provided, return that many most recent incidents
+        query = (
+            base_query
+            .order_by(desc(Incident.created_at))
+            .limit(count)
+        )
+    else:
+        # Default behavior: return latest incident per service
+        # First, get the latest incident per service using a CTE
+        latest_per_service = (
+            select(
+                Incident.service,
+                func.max(Incident.created_at).label('max_created_at')
+            )
+            .group_by(Incident.service)
+            .cte('latest_per_service')
+        )
+
+        # Then join with the main table to get the full incident details
+        query = (
+            base_query
+            .join(
+                latest_per_service,
+                and_(
+                    Incident.service == latest_per_service.c.service,
+                    Incident.created_at == latest_per_service.c.max_created_at
+                )
+            )
+            .order_by(desc(Incident.created_at))
+        )
+
     result = await db.execute(query)
     incidents = result.scalars().all()
     
