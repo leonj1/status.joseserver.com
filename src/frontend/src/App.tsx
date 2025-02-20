@@ -83,7 +83,20 @@ function App() {
         ) : (
           <div className="space-y-6">
             {incidents.map((incident) => (
-              <IncidentCard key={incident.id} incident={incident} />
+              <IncidentCard 
+                key={incident.id} 
+                incident={incident}
+                onResolve={(resolvedIncident) => {
+                  setIncidents(prev => {
+                    // Check if incident already exists in the list
+                    const exists = prev.some(inc => inc.id === resolvedIncident.id);
+                    if (exists) {
+                      return prev; // Don't add if already exists
+                    }
+                    return [resolvedIncident, ...prev];
+                  });
+                }}
+              />
             ))}
           </div>
         )}
