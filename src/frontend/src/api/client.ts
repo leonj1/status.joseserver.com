@@ -59,3 +59,18 @@ export const generateRandomIncident = async (state?: string) => {
   const response = await api.get<Incident>(url);
   return response.data;
 };
+
+export const resolveIncident = async (incident: Incident) => {
+  const response = await api.post<Incident>('/incidents', {
+    service: incident.service,
+    previous_state: incident.current_state,
+    current_state: 'operational',
+    incident: {
+      title: `${incident.service} Service Restored`,
+      description: `The ${incident.service} service has been restored to normal operation.`,
+      components: incident.incident.components,
+      url: incident.incident.url
+    }
+  });
+  return response.data;
+};

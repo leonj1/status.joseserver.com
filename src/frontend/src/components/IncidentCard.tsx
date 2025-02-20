@@ -8,6 +8,7 @@ dayjs.extend(relativeTime);
 
 interface IncidentCardProps {
   incident: Incident;
+  onResolve?: (resolvedIncident: Incident) => void;
 }
 
 const getStatusBadgeClass = (status: string) => {
@@ -36,8 +37,21 @@ const getCardBackgroundStyle = (status: string) => {
   }
 };
 
-export const IncidentCard = ({ incident }: IncidentCardProps) => {
+export const IncidentCard = ({ incident, onResolve }: IncidentCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+
+  const handleResolve = async () => {
+    try {
+      setIsResolving(true);
+      const resolvedIncident = await resolveIncident(incident);
+      onResolve?.(resolvedIncident);
+    } catch (error) {
+      console.error('Failed to resolve incident:', error);
+    } finally {
+      setIsResolving(false);
+    }
+  };
 
   return (
     <div 
@@ -94,14 +108,26 @@ export const IncidentCard = ({ incident }: IncidentCardProps) => {
         
         <div className="flex justify-between items-center text-sm text-gray-400">
           <span>{dayjs(incident.created_at).fromNow()}</span>
-          <a
-            href={incident.incident.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-purple-400 hover:text-purple-300 transition-colors duration-300"
-          >
-            View Details →
-          </a>
+          <div className="flex items-center gap-4">
+            {incident.current_state !== 'operational' && (
+              <button
+                onClick={handleResolve}
+                disabled={isResolving}
+                className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-green-800 
+                         text-white rounded-md transition-colors duration-300"
+              >
+                {isResolving ? 'Resolving...' : 'Resolve'}
+              </button>
+            )}
+            <a
+              href={incident.incident.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-purple-400 hover:text-purple-300 transition-colors duration-300"
+            >
+              View Details →
+            </a>
+          </div>
         </div>
 
         {isExpanded && incident.history.length > 0 && (
