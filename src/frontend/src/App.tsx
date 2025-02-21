@@ -120,22 +120,12 @@ function App() {
               <p className="text-gray-400">No incidents reported</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="grid gap-4 max-w-4xl mx-auto">
               {incidents.map((incident) => (
-                <IncidentCard 
-                  key={incident.id} 
+                <IncidentCard
+                  key={incident.id}
                   incident={incident}
                   onUpdate={handleIncidentUpdate}
-                  onResolve={(resolvedIncident) => {
-                    setIncidents(prev => {
-                      // Check if incident already exists in the list
-                      const exists = prev.some(inc => inc.id === resolvedIncident.id);
-                      if (exists) {
-                        return prev; // Don't add if already exists
-                      }
-                      return [resolvedIncident, ...prev];
-                    });
-                  }}
                 />
               ))}
             </div>
