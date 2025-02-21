@@ -25,6 +25,12 @@ function App() {
     }
   };
 
+  const handleIncidentUpdate = (updatedIncident: Incident) => {
+    setIncidents(prev => prev.map(incident => 
+      incident.id === updatedIncident.id ? updatedIncident : incident
+    ));
+  };
+
   useEffect(() => {
     const fetchIncidents = async () => {
       try {
@@ -107,6 +113,7 @@ function App() {
                 <IncidentCard 
                   key={incident.id} 
                   incident={incident}
+                  onUpdate={handleIncidentUpdate}
                   onResolve={(resolvedIncident) => {
                     setIncidents(prev => {
                       // Check if incident already exists in the list
