@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 
 function App() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [incidentMap, setIncidentMap] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,9 +27,14 @@ function App() {
   };
 
   const handleIncidentUpdate = (updatedIncident: Incident) => {
-    setIncidents(prev => prev.map(incident => 
-      incident.id === updatedIncident.id ? updatedIncident : incident
-    ));
+    const index = incidentMap.get(updatedIncident.id);
+    if (index !== undefined) {
+      setIncidents(prev => {
+        const newIncidents = [...prev];
+        newIncidents[index] = updatedIncident;
+        return newIncidents;
+      });
+    }
   };
 
   useEffect(() => {
@@ -36,6 +42,12 @@ function App() {
       try {
         const data = await getRecentIncidents();
         setIncidents(data);
+        // Update the index map
+        const newMap = new Map();
+        data.forEach((incident, index) => {
+          newMap.set(incident.id, index);
+        });
+        setIncidentMap(newMap);
         setError(null);
       } catch (err) {
         setError('Failed to load incidents. Please try again later.');
