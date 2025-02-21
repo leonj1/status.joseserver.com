@@ -3,11 +3,13 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import type { Incident } from '../api/client';
+import { resolveIncident } from '../api/client';
 
 dayjs.extend(relativeTime);
 
 interface IncidentCardProps {
   incident: Incident;
+  onUpdate?: (updatedIncident: Incident) => void;
 }
 
 const getStatusBadgeClass = (status: string) => {
@@ -36,8 +38,21 @@ const getCardBackgroundStyle = (status: string) => {
   }
 };
 
-export const IncidentCard = ({ incident }: IncidentCardProps) => {
+export const IncidentCard = ({ incident, onUpdate }: IncidentCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+
+  const handleResolve = async () => {
+    try {
+      setIsResolving(true);
+      const updatedIncident = await resolveIncident(incident.id);
+      onUpdate?.(updatedIncident);
+    } catch (error) {
+      console.error('Failed to resolve incident:', error);
+    } finally {
+      setIsResolving(false);
+    }
+  };
 
   return (
     <div 
@@ -63,6 +78,16 @@ export const IncidentCard = ({ incident }: IncidentCardProps) => {
               <span className={getStatusBadgeClass(incident.current_state)}>
                 {incident.current_state}
               </span>
+              {incident.current_state.toLowerCase() !== 'operational' && (
+                <button
+                  onClick={handleResolve}
+                  disabled={isResolving}
+                  className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-sm rounded-full
+                           transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isResolving ? 'Resolving...' : 'Resolve'}
+                </button>
+              )}
             </div>
             <p className="text-gray-400 mb-2">
               {incident.incident.description}

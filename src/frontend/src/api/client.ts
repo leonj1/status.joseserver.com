@@ -59,3 +59,8 @@ export const generateRandomIncident = async (state?: string) => {
   const response = await api.get<Incident>(url);
   return response.data;
 };
+
+export const resolveIncident = async (incidentId: number) => {
+  const response = await api.post<Incident>(`/incidents/${incidentId}/resolve`);
+  return response.data;
+};
