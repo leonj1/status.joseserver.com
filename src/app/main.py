@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List, Optional
 import random
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -270,9 +270,9 @@ async def resolve_incident(
     incident = result.scalar_one_or_none()
     
     if not incident:
-        return JSONResponse(
-            content={"error": "Incident not found"},
-            status_code=404
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found"
         )
     
     # Update incident state
