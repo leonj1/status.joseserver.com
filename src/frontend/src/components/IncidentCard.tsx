@@ -2,6 +2,7 @@ import { useState } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 import type { Incident } from '../api/client';
 import { resolveIncident } from '../api/client';
 
@@ -47,8 +48,10 @@ export const IncidentCard = ({ incident, onUpdate }: IncidentCardProps) => {
       setIsResolving(true);
       const updatedIncident = await resolveIncident(incident.id);
       onUpdate?.(updatedIncident);
+      toast.success('Incident resolved successfully');
     } catch (error) {
       console.error('Failed to resolve incident:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to resolve incident. Please try again.');
     } finally {
       setIsResolving(false);
     }
