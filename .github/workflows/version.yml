@@ -54,14 +54,14 @@ jobs:
           BUMP_TYPE="patch"
           
           # Check commit messages for conventional commit format
-          echo "$COMMITS" | while read -r commit; do
+          while read -r commit; do
             if [[ "$commit" == "feat!"* ]] || [[ "$commit" == "fix!"* ]] || [[ "$commit" == "BREAKING CHANGE"* ]]; then
               BUMP_TYPE="major"
               break
             elif [[ "$commit" == "feat"* ]] && [[ "$BUMP_TYPE" != "major" ]]; then
               BUMP_TYPE="minor"
             fi
-          done
+          done <<< "$COMMITS"
           
           echo "type=$BUMP_TYPE" >> $GITHUB_OUTPUT
 
