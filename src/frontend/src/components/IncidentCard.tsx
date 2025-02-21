@@ -47,7 +47,9 @@ export const IncidentCard = ({ incident, onUpdate }: IncidentCardProps) => {
     try {
       setIsResolving(true);
       const updatedIncident = await resolveIncident(incident.id);
-      onUpdate?.(updatedIncident);
+      if (onUpdate) {
+        onUpdate(updatedIncident);
+      }
       toast.success('Incident resolved successfully');
     } catch (error) {
       console.error('Failed to resolve incident:', error);
