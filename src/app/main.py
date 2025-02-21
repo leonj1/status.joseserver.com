@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List, Optional
 import random
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -237,6 +237,47 @@ async def generate_random_incident(
     db.add(incident)
     await db.commit()
     await db.refresh(incident)
+    
+    # Create history entry
+    history_entry = IncidentHistory(
+        incident_id=incident.id,
+        service=incident.service,
+        previous_state=incident.previous_state,
+        current_state=incident.current_state,
+        title=incident.title,
+        description=incident.description,
+        components=incident.components,
+        url=incident.url
+    )
+    
+    db.add(history_entry)
+    await db.commit()
+    await db.refresh(incident)
+    
+    return incident.to_dict()
+
+@app.post("/incidents/{incident_id}/resolve", response_model=IncidentWithHistory)
+async def resolve_incident(
+    incident_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> dict:
+    """
+    Resolve an incident by setting its state to operational.
+    """
+    # Get the incident
+    query = select(Incident).filter(Incident.id == incident_id)
+    result = await db.execute(query)
+    incident = result.scalar_one_or_none()
+    
+    if not incident:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found"
+        )
+    
+    # Update incident state
+    incident.previous_state = incident.current_state
+    incident.current_state = "operational"
     
     # Create history entry
     history_entry = IncidentHistory(

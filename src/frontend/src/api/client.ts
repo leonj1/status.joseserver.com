@@ -59,3 +59,18 @@ export const generateRandomIncident = async (state?: string) => {
   const response = await api.get<Incident>(url);
   return response.data;
 };
+
+export const resolveIncident = async (incidentId: number): Promise<Incident> => {
+  try {
+    const response = await api.post<Incident>(`/incidents/${incidentId}/resolve`);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 404) {
+        throw new Error(`Incident with ID ${incidentId} not found`);
+      }
+      throw new Error(`Failed to resolve incident: ${error.response?.data?.detail || error.message}`);
+    }
+    throw error;
+  }
+};
