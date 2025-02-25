@@ -14,12 +14,14 @@ interface IncidentCardProps {
 }
 
 const getStatusBadgeClass = (status: string) => {
-  switch (status.toLowerCase()) {
+  const statusLower = status.toLowerCase();
+  switch (statusLower) {
     case 'operational':
       return 'status-badge status-ok';
     case 'degraded':
       return 'status-badge status-minor';
     case 'outage':
+    case 'major':  // Handle both 'outage' and 'MAJOR' (lowercase comparison)
       return 'status-badge status-major';
     default:
       return 'status-badge bg-gray-800/50 text-gray-300 border border-gray-600/30';
@@ -27,12 +29,14 @@ const getStatusBadgeClass = (status: string) => {
 };
 
 const getCardBackgroundStyle = (status: string) => {
-  switch (status.toLowerCase()) {
+  const statusLower = status.toLowerCase();
+  switch (statusLower) {
     case 'operational':
       return { backgroundColor: '#339900', opacity: 0.1 };
     case 'degraded':
       return { backgroundColor: '#ffcc00', opacity: 0.1 };
     case 'outage':
+    case 'major':  // Handle both 'outage' and 'MAJOR' (lowercase comparison)
       return { backgroundColor: '#cc3300', opacity: 0.1 };
     default:
       return { backgroundColor: 'transparent' };

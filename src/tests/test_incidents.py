@@ -293,3 +293,47 @@ def test_get_recent_incidents_latest_per_service(test_client):
     assert len(service_a_incidents) == 1
     # Should be the latest state (operational)
     assert service_a_incidents[0]["current_state"] == "operational"
+
+def test_major_incident_status_color(test_client):
+    """
+    Test that when an incident has a 'MAJOR' status, the API returns the correct data
+    that would cause the frontend to display a red status indicator.
+    """
+    # Create an incident with MAJOR status
+    major_incident = {
+        "service": "Critical Service",
+        "previous_state": "operational",
+        "current_state": "MAJOR",  # This should trigger red status in the frontend
+        "incident": {
+            "title": "Major Service Outage",
+            "description": "Critical service is experiencing a major outage",
+            "components": ["API", "Database"],
+            "url": "https://status.test-service.com/major-incident"
+        }
+    }
+    
+    # Create the incident
+    response = test_client.post("/incidents", json=major_incident)
+    assert response.status_code == 200
+    created_incident = response.json()
+    
+    # Verify the incident was created with MAJOR status
+    assert created_incident["current_state"] == "MAJOR"
+    
+    # Get the incident through the recent incidents endpoint
+    response = test_client.get("/incidents/recent")
+    assert response.status_code == 200
+    
+    incidents = response.json()
+    
+    # Find our major incident
+    major_incidents = [i for i in incidents if i["service"] == "Critical Service"]
+    assert len(major_incidents) == 1
+    
+    # Verify the status is still MAJOR
+    assert major_incidents[0]["current_state"] == "MAJOR"
+    
+    # Note: In a real frontend test, we would verify that this MAJOR status
+    # causes the UI to display a red indicator. Since this is a backend test,
+    # we're just verifying the API returns the correct status that would
+    # trigger the frontend behavior.

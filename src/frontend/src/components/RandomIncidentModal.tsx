@@ -8,7 +8,7 @@ interface Props {
 
 export function RandomIncidentModal({ isOpen, onClose, onSubmit }: Props) {
   const [selectedState, setSelectedState] = useState('');
-  const states = ['operational', 'degraded', 'outage', 'maintenance'];
+  const states = ['operational', 'degraded', 'outage', 'maintenance', 'MAJOR'];
 
   if (!isOpen) return null;
 
@@ -30,7 +30,7 @@ export function RandomIncidentModal({ isOpen, onClose, onSubmit }: Props) {
             <option value="">Random State</option>
             {states.map((state) => (
               <option key={state} value={state}>
-                {state.charAt(0).toUpperCase() + state.slice(1)}
+                {state === 'MAJOR' ? 'MAJOR' : state.charAt(0).toUpperCase() + state.slice(1)}
               </option>
             ))}
           </select>
